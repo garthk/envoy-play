@@ -1,16 +1,31 @@
 version: '3'
 services:
+
   envoy:
     build:
       context: envoy
     ports:
       - "8080:8080"
       - "9090:9090"
+    depends_on:
+      - discovery
+
+  discovery:
+    build:
+      context: discovery
+    ports:
+      - "8083:8083"
+
   first:
     build:
       context: first
     environment:
       - SVC_TARGET_URL=http://envoy:8080/second
+    depends_on:
+      - envoy
+
   second:
     build:
       context: second
+    depends_on:
+      - envoy

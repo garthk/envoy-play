@@ -26,11 +26,12 @@ second
 
 ## Composition
 
-We're running three containers:
+We're running four containers:
 
 * The `first` service, which needs to talk to the `second` before replying
-* The `second` service, and
-* The `envoy` service
+* The `second` service,
+* The `envoy` service, and
+* The `discovery` service answering Envoy's [`/v1/clusters`][CDS] requests
 
 To demonstrate both customer-service and service-service proxying, we've set up `first` to talk to `second` via `envoy`.
 
@@ -43,3 +44,4 @@ To demonstrate both customer-service and service-service proxying, we've set up 
 [schemata]: https://github.com/envoyproxy/envoy/blob/master/source/common/json/config_schemas.cc
 [refcfg]: https://envoyproxy.github.io/envoy/install/ref_configs.html#install-ref-configs
 [slack]: http://envoyslack.cncf.io
+[CDS]: https://envoyproxy.github.io/envoy/configuration/cluster_manager/cds.html#config-cluster-manager-cds-api

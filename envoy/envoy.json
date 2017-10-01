@@ -12,7 +12,7 @@
             "codec_type": "auto",
             "stat_prefix": "router",
             "route_config": {
-              "validate_clusters": true,
+              "validate_clusters": false,
               "virtual_hosts": [
                 {
                   "name": "everything",
@@ -58,29 +58,20 @@
     "address": "tcp://0.0.0.0:9090"
   },
   "cluster_manager": {
-    "clusters": [
-      {
-        "name": "first",
+    "cds": {
+      "refresh_delay_ms": 60000,
+      "cluster": {
+        "name": "discovery",
         "type": "strict_dns",
         "connect_timeout_ms": 100,
         "lb_type": "least_request",
         "hosts": [
           {
-            "url": "tcp://first:8081"
-          }
-        ]
-      },
-      {
-        "name": "second",
-        "type": "strict_dns",
-        "connect_timeout_ms": 100,
-        "lb_type": "least_request",
-        "hosts": [
-          {
-            "url": "tcp://second:8082"
+            "url": "tcp://discovery:8083"
           }
         ]
       }
-    ]
+    },
+    "clusters": []
   }
 }
