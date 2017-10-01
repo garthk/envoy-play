@@ -1,0 +1,86 @@
+{
+  "listeners": [
+    {
+      "name": "main",
+      "address": "tcp://0.0.0.0:8080",
+      "use_proxy_proto": false,
+      "filters": [
+        {
+          "type": "read",
+          "name": "http_connection_manager",
+          "config": {
+            "codec_type": "auto",
+            "stat_prefix": "router",
+            "route_config": {
+              "validate_clusters": true,
+              "virtual_hosts": [
+                {
+                  "name": "everything",
+                  "domains": [
+                    "*"
+                  ],
+                  "routes": [
+                    {
+                      "prefix": "/first",
+                      "cluster": "first"
+                    },
+                    {
+                      "prefix": "/second",
+                      "cluster": "second"
+                    }
+                  ]
+                }
+              ]
+            },
+            "filters": [
+              {
+                "type": "decoder",
+                "name": "router",
+                "config": {}
+              }
+            ],
+            "add_user_agent": false,
+            "idle_timeout_s": 840,
+            "access_log": [
+              {
+                "path": "/dev/stdout"
+              }
+            ],
+            "use_remote_address": true,
+            "generate_request_id": true
+          }
+        }
+      ]
+    }
+  ],
+  "admin": {
+    "access_log_path": "/dev/stdout",
+    "address": "tcp://0.0.0.0:9090"
+  },
+  "cluster_manager": {
+    "clusters": [
+      {
+        "name": "first",
+        "type": "strict_dns",
+        "connect_timeout_ms": 100,
+        "lb_type": "least_request",
+        "hosts": [
+          {
+            "url": "tcp://first:8081"
+          }
+        ]
+      },
+      {
+        "name": "second",
+        "type": "strict_dns",
+        "connect_timeout_ms": 100,
+        "lb_type": "least_request",
+        "hosts": [
+          {
+            "url": "tcp://second:8082"
+          }
+        ]
+      }
+    ]
+  }
+}
