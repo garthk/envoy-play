@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"net"
 	"net/http"
 	"os"
 	"strconv"
@@ -10,22 +11,33 @@ import (
 	"github.com/labstack/echo/middleware"
 )
 
-// Host configures a host to which we will direct traffic.
-type Host struct {
-	URL string `json:"url"`
+// Tags configures tags for a host
+type Tags struct {
+	AZ                  string `json:"az"`
+	Canary              bool   `json:"canary"`
+	LoadBalancingWeight int    `json:"load_balancing_weight"`
 }
 
-// Hosts configures hosts which we will direct traffic.
-type Hosts []Host
+// Host configures a host to which we will direct traffic.
+type Host struct {
+	IPAddress string `json:"ip_address"`
+	Port      int    `json:"port"`
+	Tags      `json:"tags"`
+}
+
+// SDSResponse specifies hosts for a service
+type SDSResponse struct {
+	Hosts []Host `json:"hosts"`
+}
 
 // Cluster configures a cluster of hosts to which we will direct traffic.
 // It is NOT comprehensive vs Envoy's configurtion schemata.
 type Cluster struct {
 	Name             string `json:"name"`
+	ServiceName      string `json:"service_name"`
 	Type             string `json:"type"`
 	ConnectTimeout   int    `json:"connect_timeout_ms"`
 	LoadBalancerType string `json:"lb_type"`
-	Hosts            `json:"hosts"`
 }
 
 // CDSResponse configures clusters of hosts to which we will direct traffic.
@@ -41,23 +53,59 @@ func clusters(c echo.Context) error {
 		Clusters: []Cluster{
 			Cluster{
 				Name:             "first",
-				Type:             "strict_dns",
+				ServiceName:      "first",
+				Type:             "sds",
 				ConnectTimeout:   100,
 				LoadBalancerType: "least_request",
-				Hosts: Hosts{Host{
-					URL: "tcp://first:8081",
-				}},
 			}, Cluster{
 				Name:             "second",
-				Type:             "strict_dns",
+				ServiceName:      "second",
+				Type:             "sds",
 				ConnectTimeout:   100,
 				LoadBalancerType: "least_request",
-				Hosts: Hosts{Host{
-					URL: "tcp://second:8082",
-				}},
 			},
 		},
 	})
+}
+
+func registration(c echo.Context) error {
+	serviceName := c.Param("service_name")
+	fmt.Fprintf(os.Stderr, "registrations for service name %s\n", serviceName)
+	addrs, err := net.LookupHost(serviceName)
+	if err != nil {
+		return err
+	}
+	port, err := getPort(serviceName)
+	if err != nil {
+		return err
+	}
+	tags := Tags{
+		AZ:                  "demo",
+		Canary:              false,
+		LoadBalancingWeight: 1,
+	}
+	hosts := make([]Host, len(addrs))
+	for i, addr := range addrs {
+		hosts[i] = Host{
+			IPAddress: addr,
+			Port:      port,
+			Tags:      tags,
+		}
+	}
+	return c.JSON(http.StatusOK, SDSResponse{
+		Hosts: hosts,
+	})
+}
+
+func getPort(serviceName string) (int, error) {
+	switch serviceName {
+	case "first":
+		return 8081, nil
+	case "second":
+		return 8082, nil
+	default:
+		return 0, fmt.Errorf("getPort: unexpected serviceName %s", serviceName)
+	}
 }
 
 func main() {
@@ -65,6 +113,7 @@ func main() {
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
 	e.GET("/v1/clusters/:service_cluster/:service_node", clusters)
+	e.GET("/v1/registration/:service_name", registration)
 
 	addr := getBindAddr()
 	fmt.Fprintf(os.Stderr, "Listening on %s\n", addr)

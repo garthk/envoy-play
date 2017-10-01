@@ -59,9 +59,23 @@
   },
   "cluster_manager": {
     "cds": {
-      "refresh_delay_ms": 60000,
+      "refresh_delay_ms": 5000,
       "cluster": {
-        "name": "discovery",
+        "name": "cds",
+        "type": "strict_dns",
+        "connect_timeout_ms": 100,
+        "lb_type": "least_request",
+        "hosts": [
+          {
+            "url": "tcp://discovery:8083"
+          }
+        ]
+      }
+    },
+    "sds": {
+      "refresh_delay_ms": 5000,
+      "cluster": {
+        "name": "sds",
         "type": "strict_dns",
         "connect_timeout_ms": 100,
         "lb_type": "least_request",
